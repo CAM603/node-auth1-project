@@ -223,3 +223,10 @@ module.exports = server => {
 - Add `const bcrypt = require('bcryptjs');`
 - Add `const Users = require('../users/users-model');`
 - Add `module.exports = (req, res, next) => etc`
+
+## Inside users-model.js
+- Add functions for
+    * get
+    * getBy
+    * getById
+    * add
