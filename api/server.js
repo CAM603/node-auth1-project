@@ -1,12 +1,13 @@
 const express = require('express');
 
-const usersRouter = require('./users/users-router');
+const apiRouter = require('./api-router.js');
+const configureMiddleware = require('./configure-middleware.js');
 
 const server = express();
 
-server.use(express.json());
+configureMiddleware(server);
 
-server.use('/api/users', usersRouter);
+server.use('/api', apiRouter);
 
 server.get('/', (req, res) => {
     res.send('<h1>Hello from Node auth1 Project</h1>')

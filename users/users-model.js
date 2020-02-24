@@ -1,3 +1,9 @@
 const db = require('../data/dbConfig');
 
-module.exports = {}
+module.exports = {
+    get
+}
+
+function get(){
+    return db('users')
+}

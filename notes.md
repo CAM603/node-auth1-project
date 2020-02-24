@@ -9,6 +9,8 @@
 - `npm install express`
 - `npm install -g knex`
 - `npm i bcryptjs`
+- `npm i cors`
+- `npm i helmet`
 
 ## Change package.json
 - Delete `"test": "echo \"Error: no test specified\" && exit 1"`
@@ -175,3 +177,49 @@ exports.seed = function(knex) {
 
 ## Inside router file
 - Replace `const db = require('../data/dbConfig');` with `const Users = require('./users-model');`
+
+## Time to create authentication
+- Create auth folder
+    * Inside create `auth-router.js` and `restricted-middleware.js`
+- Inside api folder add `api-router.js` and `configure-middleware.js`
+
+## Inside server.js
+- Add `const apiRouter = require('./api-router.js');`
+- Add `const configureMiddleware = require('./configure-middleware.js');`
+- Change `server.use('/api/users', usersRouter);` to `server.use('/api', apiRouter);`
+- Remove `server.use(express.json());`
+- Remove `const usersRouter = require('../users/users-router');`
+- Add `configureMiddleware(server);`
+
+## Inside configure-middleware.js
+- Add: 
+```js
+const express = require('express');
+const helmet = require('helmet');
+const cors = require('cors');
+
+module.exports = server => {
+  server.use(helmet());
+  server.use(express.json());
+  server.use(cors());
+};
+```
+## Inside api-router.js
+- Add `const router = require('express').Router();`
+- Add `const authRouter = require('../auth/auth-router.js');`
+- Add `const usersRouter = require('../users/users-router.js');`
+- Add `const restrcited = require('../auth/restricted-middleware');`
+- Add `router.use('/auth', authRouter);`
+- Add `router.use('/users', restrcited, usersRouter);`
+- Add `module.exports = router;`
+
+## Inside auth-router.js
+- Add `const bcrypt = require('bcryptjs');`
+- Add `const router = require('express').Router();`
+- Add `const Users = require('../users/users-model.js');`
+- Add `module.exports = router;`
+
+## Inside restricted-middleware.js
+- Add `const bcrypt = require('bcryptjs');`
+- Add `const Users = require('../users/users-model');`
+- Add `module.exports = (req, res, next) => etc`
