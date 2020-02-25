@@ -313,3 +313,10 @@ store: new KnexStore({
 - Add `server.use(session(sessionConfig))`
   * Turns on session middleware
   * req.session object is now created by express-session
+
+## Time to create-react-app
+- `npx create-react-app client`
+- Add dependencies
+ * `npm i axios`
+ * `npm install --save react-router-dom`
+ 
