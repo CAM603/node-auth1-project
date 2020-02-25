@@ -294,3 +294,22 @@ module.exports = (req, res, next) => {
 ## Implement logout
 - Inside `auth-router.js` create a get request to `/logout`
 - If there is a `req.session` you can terminate it with `req.session.destroy`
+
+## Add express session store
+- `npm i connect-session-knex`
+- Inside `server.js` (or `configure-middleware.js`) add `const KnexStore = require('connect-session-knex')(session);`
+- Add `const knex = require('../database/dbConfig');`
+  * needed for storing sessions in the database
+- Inside the `sessionConfig` object add:
+```js
+store: new KnexStore({
+        knex,
+        tablename: 'sessions',
+        createtable: true,
+        sidfieldname: 'sid',
+        clearInterval: 1000 * 60 * 10
+    }),
+```
+- Add `server.use(session(sessionConfig))`
+  * Turns on session middleware
+  * req.session object is now created by express-session
