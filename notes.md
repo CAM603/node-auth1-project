@@ -243,3 +243,54 @@ module.exports = server => {
     * inside the `then()` block add an if statement `if (user && bcrypt.compareSync(password, user.password))`
 
 ## Inside restricted middleware
+- Export a function that checks if `username` and `password` are in the headers
+- If they are, check to see if they are valid using `bcrypt`
+  * `if(user && bcrypt.compareSync(password, user.password))`
+- If they are valid, invoke `next`
+
+## Add express sessions
+- `npm i express-session`
+- Require express-sessions in `index.js` or `configure-middleware.js`
+  * `const session = require('express-session');`
+- Add `server.use(session(sessionConfig))`
+- Create `sessionConfig`
+```js
+const sessionConfig = {
+  // Defaults to 'sid'. Change so hackers don't know what middleware we are using
+  name: 'monkey', 
+  // Secret that encrypts cookie (usually configured in .env)
+  secret: 'I like pineapple on pizza', 
+  cookie: {
+    // How long cookie/session will be valid (30 seconds here)
+    maxAge: 1000 * 30,
+    // True in production!
+    secure: false, 
+    // Cookie can't be accessed through javascript 
+    httpOnly: true, 
+  },
+  // Recreate a session even if there is no change
+  resave: false, 
+  // GDPR laws against setting cookies automatically. Will need permission from client to change to true
+  saveUninitialized: false 
+}
+```
+- Add `req.session.user = user;` in `auth-router.js` before success response
+
+## Edit restricted-middleware.js
+- With sessions, now we only need to check if there is a `req.session` and a user property `req.session.user`
+- If true invoke `next()`
+- Else `status(401)`
+- `restricted-middleware.js` will now look like:
+```js
+module.exports = (req, res, next) => {
+    if(req.session && req.session.user) {
+        next();
+    } else {
+        res.status(401).json({ message: 'You shall not pass' });
+    }
+}
+```
+
+## Implement logout
+- Inside `auth-router.js` create a get request to `/logout`
+- If there is a `req.session` you can terminate it with `req.session.destroy`
