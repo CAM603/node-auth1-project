@@ -4,7 +4,8 @@ module.exports = {
     get,
     getBy,
     getById,
-    add
+    add,
+    getUserProfile
 }
 
 function get(){
@@ -31,4 +32,12 @@ function add(user) {
             const [id] = ids;
             return getById(id)
         });
+}
+
+function getUserProfile(id) {
+    return db('profile')
+        .join('users', 'profile.user_id', 'users.id')
+        .select('users.username', 'profile.name', 'profile.favorite_food as favorite food', 'profile.quote')
+        .where({user_id: id})
+        .first()
 }
