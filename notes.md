@@ -230,3 +230,16 @@ module.exports = server => {
     * getBy
     * getById
     * add
+
+## Inside auth-router.js
+- Add a *post request* to `/register`
+    * `let user = req.body;`
+    * `const hash = bcrypt.hashSync(user.password, 12);`
+    * `user.password = hash`
+    * pass `user` into `Users.add()`
+- Add a *post request* to `/login`
+    * `let { username, password } = req.body;`
+    * pass `username` into `Users.findBy()`
+    * inside the `then()` block add an if statement `if (user && bcrypt.compareSync(password, user.password))`
+
+## Inside restricted middleware
