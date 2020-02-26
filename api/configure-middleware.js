@@ -31,10 +31,15 @@ const sessionConfig = {
     }),
 }
 
+const config = {
+    origin: 'http://localhost:3000',
+    credentials: true,
+};
+
 module.exports = server => {
     server.use(helmet());
     server.use(express.json());
-    server.use(cors());
+    server.use(cors(config));
     server.use(session(sessionConfig))
     server.use(session(sessionConfig))
 };
