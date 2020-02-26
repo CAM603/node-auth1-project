@@ -1,7 +1,19 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import axios from 'axios';
 
 const Navigation = (props) => {
+
+    const logout = () => {
+        axios.get('http://localhost:4000/api/auth/logout')
+            .then(res => {
+                console.log(res)
+                localStorage.removeItem('id')
+            })
+            .catch(err => {
+                console.log(err)
+            })
+    }
     return (
         <div className="navigation">
             <Link to="/">
@@ -15,6 +27,9 @@ const Navigation = (props) => {
             </Link>
             <Link to="/login">
                 <p>Login</p>
+            </Link>
+            <Link to="/">
+                <p onClick={logout}>Logout</p>
             </Link>
         </div>
     )

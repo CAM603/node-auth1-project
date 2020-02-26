@@ -6,7 +6,7 @@ const PrivateRoute = ({component: Component, ...rest}) => {
         <Route
         {...rest}
         render={props => {
-            if(1 + 1 === 3) {
+            if(localStorage.getItem('id')) {
                 return <Component {...props}/>
             } else {
                 return <Redirect to="/"/>
