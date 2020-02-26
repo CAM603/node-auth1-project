@@ -1,0 +1,322 @@
+## Add package.json
+- `npm init -y`
+
+## Install nodemon as a development time dependency
+- `npm i nodemon -D`
+
+## Install additional dependencies
+- `npm install knex sqlite3`
+- `npm install express`
+- `npm install -g knex`
+- `npm i bcryptjs`
+- `npm i cors`
+- `npm i helmet`
+
+## Change package.json
+- Delete `"test": "echo \"Error: no test specified\" && exit 1"`
+- Add `"server": "nodemon index.js"`
+
+## Add a “start” script in package.json
+- Start script uses node instead of nodemon to run index.js so we can deploy the API later
+- Inside the scripts object add `"start": "node index.js"`
+
+## Install dotenv as a production dependency
+- `npm install dotenv`
+
+## Create files
+- .env
+- index.js
+- server.js (in root directory or in api folder)
+
+## Inside .env
+- Add `PORT=5000`
+- Make sure to add .env to .gitignore to prevent it from being uploaded to GitHub
+    * `npx gitignore node` will create a custom gitignore
+
+## Inside index.js
+- Add `require('dotenv').config();` at the very top
+    * *It's recommended to load configuration for .env as early as possible*
+- Add `const server = require('./api/server.js');`
+- Add `const PORT = process.env.PORT || 4000;`
+- Add `server.listen(PORT, () => console.log(`Lisitening on port ${PORT}...`));`
+
+## Inside server.js
+- Add `const express = require('express');`
+- Add `const server = express();`
+- Add `server.use(express.json());`
+- Add (optional) `server.get('/', (req, res) => res.send('<h1>Hello from Node auth1 Project</h1>'));`
+- Add `module.exports = server;`
+
+## Initialize knex
+- `knex init`
+
+## Edit knexfile.js
+**BEFORE**
+```js
+module.exports = {
+
+  development: {
+    client: 'sqlite3',
+    connection: {
+      filename: './dev.sqlite3'
+    }
+  },
+}
+```
+**AFTER**
+```js
+module.exports = {
+    development: {
+        client: 'sqlite3',
+        connection: {
+          filename: './data/users.db3'
+        },
+        useNullAsDefault: true,
+        migrations: {
+          directory: './data/migrations'
+        },
+        seeds: {
+          directory: './data/seeds'
+        },
+        pool: {
+          afterCreate: (conn, done) => {
+            // runs after a connection is made to the sqlite engine
+            conn.run('PRAGMA foreign_keys = ON', done); // turn on FK enforcement
+          },
+        },
+      },
+}
+```
+- The `development.connection.filename` will create and name the database
+    * **IMPORTANT** path should start at root of the repo, not the configuration file itself
+- The `development.pool` is needed when using foreign keys
+
+## Add folder with a router file inside. Name accordingly
+- Example
+    * `users` folder
+    * `users-router.js` file
+- Add `const express = require('express');`
+- Add `const router = express.Router();`
+- Add `module.exports = router;`
+
+## Inside server.js
+*Change names according to the router name and file structure*
+- Add `const usersRouter = require('./users/users-router');`
+    * Goes under `const express = require('express');`
+- Add `server.use('/api/users', usersRouter);`
+    * Goes under `server.use(express.json());`
+
+## Add data folder with a dbConfig.js file
+- Add `const knex = require('knex');`
+- Add `const configOptions = require('../knexfile').development;`
+- Add `module.exports = knex(configOptions);`
+
+## Inside users-router.js
+- Add `const db = require('../data/dbConfig');`
+    * This will be replaced later when `users-model.js` is built
+
+## Create a migration
+- `knex migrate:make create_users_table`
+
+## Inside new migration file
+- Create a table however you please
+- Add migration `knex migrate:latest`
+
+## Prepare for adding seeds
+- Run `npm install knex-cleaner`
+- Run `knex seed:make 00-cleanup`
+- Inside the cleanup seed add
+```js
+const cleaner = require('knex-cleaner');
+
+exports.seed = function(knex) {
+  return cleaner.clean(knex, {
+    // resets ids
+    mode: 'truncate',
+    // don't empty migration tables
+    ignoreTables: ['knex_migrations', 'knex_migrations_lock'], 
+  });
+};
+```
+- This removes all tables (excluding the two tables that track migrations) in the correct order before any seed files run.
+
+## Make seeds
+- **Important** create seeds *in the same order you created your tables* 
+    * In other words, don’t create a seed with a foreign key, until that reference record exists
+**Example Seeds**
+- `knex seed:make 01-users`
+- `knex seed:make 02-profile`
+
+## Inside each seed
+- Change all `table_name`'s to the name of the table
+- Remove the following code block:
+```js
+  return knex('profile').del()
+    .then(function () {
+    });
+```
+- Seeds should now look like:
+```js
+exports.seed = function(knex) {
+  // Inserts seed entries
+  return knex('profile').insert([
+    {id: 1, colName: 'rowValue1'},
+    {id: 2, colName: 'rowValue2'},
+    {id: 3, colName: 'rowValue3'}
+  ]);
+};
+```
+- Add data to your seeds accordingly
+- Run `knex seed:run` when done
+
+## Add model (or database access file)
+- Example
+    * Inside users folder create `users-model.js`
+- Add `const db = require('../data/dbConfig');`
+- Add `module.exports = {}`
+
+## Inside router file
+- Replace `const db = require('../data/dbConfig');` with `const Users = require('./users-model');`
+
+## Time to create authentication
+- Create auth folder
+    * Inside create `auth-router.js` and `restricted-middleware.js`
+- Inside api folder add `api-router.js` and `configure-middleware.js`
+
+## Inside server.js
+- Add `const apiRouter = require('./api-router.js');`
+- Add `const configureMiddleware = require('./configure-middleware.js');`
+- Change `server.use('/api/users', usersRouter);` to `server.use('/api', apiRouter);`
+- Remove `server.use(express.json());`
+- Remove `const usersRouter = require('../users/users-router');`
+- Add `configureMiddleware(server);`
+
+## Inside configure-middleware.js
+- Add: 
+```js
+const express = require('express');
+const helmet = require('helmet');
+const cors = require('cors');
+
+module.exports = server => {
+  server.use(helmet());
+  server.use(express.json());
+  server.use(cors());
+};
+```
+## Inside api-router.js
+- Add `const router = require('express').Router();`
+- Add `const authRouter = require('../auth/auth-router.js');`
+- Add `const usersRouter = require('../users/users-router.js');`
+- Add `const restrcited = require('../auth/restricted-middleware');`
+- Add `router.use('/auth', authRouter);`
+- Add `router.use('/users', restrcited, usersRouter);`
+- Add `module.exports = router;`
+
+## Inside auth-router.js
+- Add `const bcrypt = require('bcryptjs');`
+- Add `const router = require('express').Router();`
+- Add `const Users = require('../users/users-model.js');`
+- Add `module.exports = router;`
+
+## Inside restricted-middleware.js
+- Add `const bcrypt = require('bcryptjs');`
+- Add `const Users = require('../users/users-model');`
+- Add `module.exports = (req, res, next) => etc`
+
+## Inside users-model.js
+- Add functions for
+    * get
+    * getBy
+    * getById
+    * add
+
+## Inside auth-router.js
+- Add a *post request* to `/register`
+    * `let user = req.body;`
+    * `const hash = bcrypt.hashSync(user.password, 12);`
+    * `user.password = hash`
+    * pass `user` into `Users.add()`
+- Add a *post request* to `/login`
+    * `let { username, password } = req.body;`
+    * pass `username` into `Users.findBy()`
+    * inside the `then()` block add an if statement `if (user && bcrypt.compareSync(password, user.password))`
+
+## Inside restricted middleware
+- Export a function that checks if `username` and `password` are in the headers
+- If they are, check to see if they are valid using `bcrypt`
+  * `if(user && bcrypt.compareSync(password, user.password))`
+- If they are valid, invoke `next`
+
+## Add express sessions
+- `npm i express-session`
+- Require express-sessions in `index.js` or `configure-middleware.js`
+  * `const session = require('express-session');`
+- Add `server.use(session(sessionConfig))`
+- Create `sessionConfig`
+```js
+const sessionConfig = {
+  // Defaults to 'sid'. Change so hackers don't know what middleware we are using
+  name: 'monkey', 
+  // Secret that encrypts cookie (usually configured in .env)
+  secret: 'I like pineapple on pizza', 
+  cookie: {
+    // How long cookie/session will be valid (30 seconds here)
+    maxAge: 1000 * 30,
+    // True in production!
+    secure: false, 
+    // Cookie can't be accessed through javascript 
+    httpOnly: true, 
+  },
+  // Recreate a session even if there is no change
+  resave: false, 
+  // GDPR laws against setting cookies automatically. Will need permission from client to change to true
+  saveUninitialized: false 
+}
+```
+- Add `req.session.user = user;` in `auth-router.js` before success response
+
+## Edit restricted-middleware.js
+- With sessions, now we only need to check if there is a `req.session` and a user property `req.session.user`
+- If true invoke `next()`
+- Else `status(401)`
+- `restricted-middleware.js` will now look like:
+```js
+module.exports = (req, res, next) => {
+    if(req.session && req.session.user) {
+        next();
+    } else {
+        res.status(401).json({ message: 'You shall not pass' });
+    }
+}
+```
+
+## Implement logout
+- Inside `auth-router.js` create a get request to `/logout`
+- If there is a `req.session` you can terminate it with `req.session.destroy`
+
+## Add express session store
+- `npm i connect-session-knex`
+- Inside `server.js` (or `configure-middleware.js`) add `const KnexStore = require('connect-session-knex')(session);`
+- Add `const knex = require('../database/dbConfig');`
+  * needed for storing sessions in the database
+- Inside the `sessionConfig` object add:
+```js
+store: new KnexStore({
+        knex,
+        tablename: 'sessions',
+        createtable: true,
+        sidfieldname: 'sid',
+        clearInterval: 1000 * 60 * 10
+    }),
+```
+- Add `server.use(session(sessionConfig))`
+  * Turns on session middleware
+  * req.session object is now created by express-session
+
+## Time to create-react-app
+- `npx create-react-app client`
+- Add dependencies
+ * `npm i axios`
+ * `npm install --save react-router-dom`
+ 
